@@ -411,6 +411,7 @@
 				BB18B04919FD92B4003F99DB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		BB18B04A19FD92B4003F99DB /* Build configuration list for PBXNativeTarget "LocationTests" */ = {
 			isa = XCConfigurationList;
@@ -419,6 +420,7 @@
 				BB18B04C19FD92B4003F99DB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

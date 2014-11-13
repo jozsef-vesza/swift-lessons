@@ -9,14 +9,19 @@
 import Foundation
 import CoreLocation
 
+enum ErrorType {
+    case Regular(String)
+    case Permission
+}
+
 class LocationService: NSObject, CLLocationManagerDelegate {
     var completionHandler: ((newLocation: CLLocation) -> ())?
-    var errorHandler: ((error: NSError) -> ())?
+    var errorHandler: ((error: ErrorType) -> ())?
     let locationManager = CLLocationManager()
     
     func startUpdatingLocation(
         #completion: ((newLocation: CLLocation) -> ())?,
-        error: ((error: NSError) -> ())?) {
+        error: ((error: ErrorType) -> ())?) {
             if let compl = completion {
                 completionHandler = compl
             }
@@ -24,18 +29,30 @@ class LocationService: NSObject, CLLocationManagerDelegate {
                 errorHandler = err
             }
             
-            let status = CLLocationManager.authorizationStatus()
+            if let error = checkPermissions() {
+                errorHandler?(error: error)
+            }
             
             locationManager.delegate = self
             locationManager.desiredAccuracy = kCLLocationAccuracyBest
-            
-            if status == CLAuthorizationStatus.NotDetermined {
-                if locationManager.respondsToSelector("requestWhenInUseAuthorization") {
-                    locationManager.requestWhenInUseAuthorization()
-                }
-            }
-            
             locationManager.startUpdatingLocation()
+    }
+    
+    func checkPermissions() -> ErrorType? {
+        let status = CLLocationManager.authorizationStatus()
+        
+        switch CLLocationManager.authorizationStatus() {
+        case .NotDetermined:
+            if locationManager.respondsToSelector("requestWhenInUseAuthorization") {
+                locationManager.requestWhenInUseAuthorization()
+            }
+        case .Restricted, .Denied:
+            return .Permission
+        default:
+            return nil
+        }
+        
+        return nil
     }
     
     func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
@@ -47,7 +64,7 @@ class LocationService: NSObject, CLLocationManagerDelegate {
     
     func locationManager(manager: CLLocationManager!, didFailWithError error: NSError!) {
         if let err = errorHandler {
-            err(error: error)
+            err(error: .Regular(error.localizedDescription))
             locationManager.stopUpdatingLocation()
         }
     }
