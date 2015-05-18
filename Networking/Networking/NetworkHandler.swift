@@ -46,7 +46,7 @@ class NetworkHandler: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate ,
                 callback("", error.localizedDescription)
             } else {
                 if let result = NSString(data: data, encoding: NSASCIIStringEncoding) {
-                    callback(result, nil)
+                    callback(result as String, nil)
                 }
             }
         }
@@ -108,7 +108,7 @@ class NetworkHandler: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate ,
             } else {
                 let response = NSString(data: responsedata, encoding: NSUTF8StringEncoding)
                 println("session \(session) upload completed, response:\(responsedata)")
-                uploadCompletionHandler(response!, nil)
+                uploadCompletionHandler(response! as String, nil)
             }
             
             uploadQueue.removeValueForKey(SessionProperties.uploadIdentifier)
