@@ -9,63 +9,56 @@
 import Foundation
 import CoreLocation
 
-enum ErrorType {
-    case Regular(String)
-    case Permission
+enum LocationServiceError {
+    case locationUpdateError(String)
 }
 
-class LocationService: NSObject, CLLocationManagerDelegate {
-    var completionHandler: ((newLocation: CLLocation) -> ())?
-    var errorHandler: ((error: ErrorType) -> ())?
-    let locationManager = CLLocationManager()
+class LocationService: NSObject {
+    private let locationManager = CLLocationManager()
     
-    func startUpdatingLocation(
-        #completion: ((newLocation: CLLocation) -> ())?,
-        error: ((error: ErrorType) -> ())?) {
-            if let compl = completion {
-                completionHandler = compl
-            }
-            if let err = error {
-                errorHandler = err
+    var completionHandler: ((String) -> ())?
+    var errorHandler: ((LocationServiceError) -> ())?
+    
+    func updateLocation() {
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.requestWhenInUseAuthorization()
+        locationManager.startUpdatingLocation()
+    }
+    
+    /// Extract the city name from a given location.
+    ///
+    /// [Source](https://developer.apple.com/documentation/corelocation/converting_between_coordinates_and_user-friendly_place_names)
+    ///
+    private func reportCityFrom(_ location: CLLocation) {
+        let geocoder = CLGeocoder()
+        
+        geocoder.reverseGeocodeLocation(location) { [weak self] (placemarks, error) in
+            guard let self = self else { return }
+            
+            if let error = error {
+                self.errorHandler?(.locationUpdateError(error.localizedDescription))
             }
             
-            if let error = checkPermissions() {
-                errorHandler?(error: error)
+            guard let placemark = placemarks?.first, let city = placemark.locality else {
+                self.completionHandler?("")
+                return
             }
             
-            locationManager.delegate = self
-            locationManager.desiredAccuracy = kCLLocationAccuracyBest
-            locationManager.startUpdatingLocation()
-    }
-    
-    func checkPermissions() -> ErrorType? {
-        let status = CLLocationManager.authorizationStatus()
-        
-        switch CLLocationManager.authorizationStatus() {
-        case .NotDetermined:
-            if locationManager.respondsToSelector("requestWhenInUseAuthorization") {
-                locationManager.requestWhenInUseAuthorization()
-            }
-        case .Restricted, .Denied:
-            return .Permission
-        default:
-            return nil
-        }
-        
-        return nil
-    }
-    
-    func locationManager(manager: CLLocationManager!, didUpdateLocations locations: [AnyObject]!) {
-        if let compl = completionHandler {
-            compl(newLocation: locations.last! as CLLocation)
-            locationManager.stopUpdatingLocation()
+            self.completionHandler?(city)
         }
     }
+}
+
+extension LocationService: CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let location = locations.last else { return }
+        locationManager.stopUpdatingLocation()
+        reportCityFrom(location)
+    }
     
-    func locationManager(manager: CLLocationManager!, didFailWithError error: NSError!) {
-        if let err = errorHandler {
-            err(error: .Regular(error.localizedDescription))
-            locationManager.stopUpdatingLocation()
-        }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        locationManager.stopUpdatingLocation()
+        errorHandler?(.locationUpdateError(error.localizedDescription))
     }
 }
