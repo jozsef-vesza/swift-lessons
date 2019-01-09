@@ -40,7 +40,7 @@ class LocationService: NSObject {
                 self.errorHandler?(.locationUpdateError(error.localizedDescription))
             }
             
-            guard let placemark = placemarks?.first, let city = placemark.locality else {
+            guard let city = placemarks?.first?.locality else {
                 self.completionHandler?("")
                 return
             }
